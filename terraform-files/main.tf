@@ -22,7 +22,7 @@ variable "tags" {
 resource "aws_instance" "control_node" {
   ami                    = "ami-0b0af3577fe5e3532"
   instance_type          = "t2.medium"
-  key_name               = "firstkey"
+  key_name               = "<pem-file>"
   iam_instance_profile   = aws_iam_instance_profile.ec2full.name
   vpc_security_group_ids = [aws_security_group.tf-sec-gr.id]
   tags = {
@@ -34,7 +34,7 @@ resource "aws_instance" "managed_nodes" {
   ami                    = "ami-0b0af3577fe5e3532"
   count                  = 3
   instance_type          = "t2.micro"
-  key_name               = "firstkey"
+  key_name               = "<pem-file>"
   vpc_security_group_ids = [aws_security_group.tf-sec-gr.id]
   tags = {
     Name        = "ansible_${element(var.tags, count.index)}"
@@ -126,7 +126,7 @@ resource "null_resource" "config" {
   }
 
   provisioner "file" {
-    source      = "./firstkey.pem"
+    source      = "./<pem-file>.pem"
     destination = "/home/ec2-user/firstkey.pem"
   }
 
@@ -136,7 +136,7 @@ resource "null_resource" "config" {
       "sudo yum install -y python3",
       "pip3 install --user ansible",
       "pip3 install --user boto3",
-      "chmod 400 firstkey.pem"
+      "chmod 400 <pem-file>.pem"
     ]
   }
 
