@@ -4,7 +4,7 @@
   roles: 
     - docker
 - name: Postgre Database configuration
-  hosts: _ansible_postgresql
+  hosts: _ansible_postgrsql
   become: true
   roles:
     - postgre
