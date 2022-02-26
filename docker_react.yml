@@ -1,15 +1,14 @@
 - name: Install docker
-  hosts: _ansible_postgrsql
+  gather_facts: No
+  any_errors_fatal: true
+  hosts: _ansible_react
   become: true
-  vars_files:
-    - secret.yml
   tasks:
     - name: upgrade all packages
       yum: 
         name: '*'
         state: latest
-
-    # we may need to uninstall any existing docker files from the centos repo first. 
+    # we may need to uninstall any existing docker files from the centos repo first.
     - name: Remove docker if installed from CentOS repo
       yum:
         name: "{{ item }}"
@@ -23,7 +22,6 @@
         - docker-latest-logrotate
         - docker-logrotate
         - docker-engine
-
     - name: Install yum utils
       yum:
         name: "{{ item }}"
@@ -32,82 +30,66 @@
         - yum-utils
         - device-mapper-persistent-data
         - lvm2
-
-  # yum-utils is a collection of tools and programs for managing yum repositories, installing debug packages, source packages, extended information from repositories and administration.
     - name: Add Docker repo
       get_url:
         url: https://download.docker.com/linux/centos/docker-ce.repo
         dest: /etc/yum.repos.d/docer-ce.repo
-
     - name: Install Docker
       package:
         name: docker-ce
         state: latest
-
     - name: Install pip
-      package: 
+      package:
         name: python3-pip
         state: present
         update_cache: true
-
     - name: Install docker sdk
       pip:
         name: docker
-
     - name: Add user ec2-user to docker group
       user:
         name: ec2-user
         groups: docker
         append: yes
-
     - name: Start Docker service
       service:
         name: docker
         state: started
         enabled: yes
-
     - name: create build directory
       file:
-        path: /home/ec2-user/postgresql
+        path: /home/ec2-user/react
         state: directory
         owner: root
         group: root
         mode: '0755'
-
-    - name: copy the sql script
+    # at this point do not forget change DB_HOST env variable for postgresql node
+    - name: copy files to the nodejs node
       copy:
-        src: /home/ec2-user/ansible-Project/postgres/init.sql
-        dest: /home/ec2-user/postgresql
-
+        src: /home/ec2-user/ansible-Project/react/client/
+        dest: /home/ec2-user/react
     - name: copy the Dockerfile
       copy:
-        src: /home/ec2-user/ansible-Project/postgres/Dockerfile
-        dest: /home/ec2-user/postgresql
-
-    - name: remove jimmy_postgre container and jimmyshan/postgre if exists
-      shell: "docker ps -q --filter 'name=jimmy_postgre' | grep -q . && docker stop jimmy_postgre && docker rm -fv jimmy_postgre && docker image rm -f jimmyshan/postgre || echo 'Not Found'"
-    
+        src: /home/ec2-user/ansible-Project/react/Dockerfile
+        dest: /home/ec2-user/react
+    - name: remove jimmyshan_react container and jimmyshan/react image if exists
+      shell: "docker ps -q --filter 'name=jimmyshan_react' | grep -q . && docker stop jimmyshan_react && docker rm -fv jimmyshan_react && docker image rm -f jimmyshan/react || echo 'Not Found'"
     - name: build container image
       docker_image:
-        name: jimmyshan/postgre
+        name: jimmyshan/react
         build:
-          path: /home/ec2-user/postgresql
+          path: /home/ec2-user/react
         source: build
         state: present
-
-    - name: Launch postgresql docker container
+    - name: Launch react docker container
       docker_container:
-        name: jimmy_postgre
-        image: jimmyshan/postgre
+        name: jimmyshan_react
+        image: jimmyshan/react
         state: started
-        ports: 
-        - "5432:5432"
-        env:
-          POSTGRES_PASSWORD: "{{ password }}"
-        volumes:
-          - /custom/mount:/var/lib/postgresql/data
-      register: docker_info
-    
+        ports:
+        - "3000:3000"
+      register: container_info
+
     - name: print the container info
       debug:
-        var: docker_info
+        var: container_info
